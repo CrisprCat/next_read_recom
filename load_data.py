@@ -11,7 +11,7 @@ import argparse
 import os
 import sys
 import dask.dataframe as dd
-
+from scipy.sparse import csr_matrix
 
 def load_data(file_path):
     """
@@ -66,6 +66,21 @@ def filter_valid_users(books_per_user, percentile=0.95):
     threshold = books_per_user.quantile(percentile).compute()
     return books_per_user[books_per_user <= threshold].index.compute().tolist()
 
+def build_interaction_matrix(df, valid_users):
+    df = df[df.user_id.isin(valid_users)].compute()
+    
+    # Map user_id and book_id to integer indices
+    user_map = {u: i for i, u in enumerate(df["user_id"].unique())}
+    book_map = {b: i for i, b in enumerate(df["book_id"].unique())}
+
+    rows = df["user_id"].map(user_map)
+    cols = df["book_id"].map(book_map)
+    data = [1] * len(df)  # implicit feedback
+
+    mat = csr_matrix((data, (rows, cols)), 
+                     shape=(len(user_map), len(book_map)))
+    
+    return mat, user_map, book_map
 
 def parse_arguments():
     """
@@ -104,6 +119,10 @@ def main():
 
     print(f"✅ Found {len(valid_users)} valid users at or below the {args.percentile*100:.0f}th percentile.")
     # Optionally, you can save valid_users to a file or process further
+
+    # Build user-item matrix
+    interaction_matrix, user_map, book_map = build_interaction_matrix(df_clean, valid_users)
+    print("✅ Built interaction matrix.")
 
 
 if __name__ == "__main__":
