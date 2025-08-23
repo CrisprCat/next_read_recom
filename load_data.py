@@ -140,6 +140,10 @@ def main():
     als_model = train_als(interaction_matrix)
     print("✅ Trained ALS model.")
 
+    # Example: recommend items for first user
+    user_idx = 0
+    recommendations = als_model.recommend(user_idx, interaction_matrix[user_idx])
+    print("Top recommendations:", recommendations)
 
 
 if __name__ == "__main__":
