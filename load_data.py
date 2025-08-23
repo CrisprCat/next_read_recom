@@ -5,6 +5,8 @@ Process Goodreads interactions CSV:
 2. Filter only read books with ratings.
 3. Group by users and count unique books read.
 4. Identify users below the 95th percentile of reading activity.
+5. Build a sparse user - interaction matrix
+6. Train an ALS model
 """
 
 import argparse
@@ -12,6 +14,7 @@ import os
 import sys
 import dask.dataframe as dd
 from scipy.sparse import csr_matrix
+from implicit.als import AlternatingLeastSquares
 
 def load_data(file_path):
     """
@@ -82,6 +85,15 @@ def build_interaction_matrix(df, valid_users):
     
     return mat, user_map, book_map
 
+def train_als(interaction_matrix, factors=50, regularization=0.01, iterations=15):
+    model = AlternatingLeastSquares(
+        factors=factors,
+        regularization=regularization,
+        iterations=iterations
+    )
+    model.fit(interaction_matrix)
+    return model
+
 def parse_arguments():
     """
     Parse CLI arguments.
@@ -123,6 +135,11 @@ def main():
     # Build user-item matrix
     interaction_matrix, user_map, book_map = build_interaction_matrix(df_clean, valid_users)
     print("✅ Built interaction matrix.")
+
+    # Train ALS model
+    als_model = train_als(interaction_matrix)
+    print("✅ Trained ALS model.")
+
 
 
 if __name__ == "__main__":
